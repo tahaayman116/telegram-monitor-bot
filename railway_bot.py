@@ -201,24 +201,41 @@ class RailwayTelegramBot:
     
     async def start_client(self):
         """بدء العميل"""
-        logger.info(f"🔍 فحص المتغيرات:")
-        logger.info(f"API_ID: {self.api_id}")
-        logger.info(f"API_HASH: {'*' * len(self.api_hash) if self.api_hash else 'فارغ'}")
-        logger.info(f"PHONE: {self.phone}")
-        
-        if not self.api_id or not self.api_hash or not self.phone:
+        if not self.api_id or not self.api_hash:
             logger.error("❌ بيانات API غير مكتملة!")
             logger.error(f"API_ID موجود: {bool(self.api_id)}")
             logger.error(f"API_HASH موجود: {bool(self.api_hash)}")
-            logger.error(f"PHONE موجود: {bool(self.phone)}")
             return False
-            
-        self.client = TelegramClient('railway_session', self.api_id, self.api_hash)
+        
+        # استخدام الجلسة المشفرة إذا كانت متوفرة
+        session_string = os.getenv('SESSION_STRING', '')
+        if session_string:
+            import base64
+            try:
+                session_data = base64.b64decode(session_string)
+                with open('temp_session.session', 'wb') as f:
+                    f.write(session_data)
+                self.client = TelegramClient('temp_session', self.api_id, self.api_hash)
+                logger.info("🔐 استخدام الجلسة المحفوظة...")
+            except Exception as e:
+                logger.error(f"خطأ في فك تشفير الجلسة: {e}")
+                return False
+        else:
+            self.client = TelegramClient('railway_session', self.api_id, self.api_hash)
         
         try:
-            await self.client.start(phone=self.phone)
-            logger.info("تم تسجيل الدخول بنجاح!")
-            return True
+            if session_string:
+                await self.client.connect()
+                if await self.client.is_user_authorized():
+                    logger.info("✅ تم تسجيل الدخول باستخدام الجلسة المحفوظة!")
+                    return True
+                else:
+                    logger.error("❌ الجلسة غير صالحة!")
+                    return False
+            else:
+                await self.client.start(phone=self.phone)
+                logger.info("تم تسجيل الدخول بنجاح!")
+                return True
         except Exception as e:
             logger.error(f"خطأ في تسجيل الدخول: {e}")
             return False
