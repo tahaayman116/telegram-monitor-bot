@@ -1,0 +1,15 @@
+# ملفات Python
+__pycache__/
+*.py[cod]
+*.session
+*.session-journal
+
+# ملفات البيانات الحساسة
+config.json
+saved_messages.json
+keywords.json
+
+# ملفات النظام
+.DS_Store
+Thumbs.db
+.env
